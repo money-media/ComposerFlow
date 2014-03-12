@@ -1,0 +1,11 @@
+#!/usr/bin/env php
+<?php
+$loader = require_once('vendor/autoload.php');
+use Symfony\Component\Console\Application;
+use MoneyMedia\Command\ComposerFlowCommand;
+
+require_once('src/Command/ComposerFlowCommand.php'); // our autoloader seems busted FIXME
+
+$application = new Application();
+$application->add(new ComposerFlowCommand);
+$application->run();
