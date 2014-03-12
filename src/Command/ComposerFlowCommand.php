@@ -76,7 +76,11 @@ class ComposerFlowCommand extends Command
 
         $composerGit = new Git($repo); // checkout tag
         $composerGit->checkout($refspec);
-        echo `composer install -n`;
+        $process = new Process('composer install -n');
+        $process->setTimeout(3600);
+        $process->run(function ($type, $buffer) use($output) {
+            $output->write($buffer);
+        });
 
         if(!chdir('vendor')) {
             $output->writeln("<error>Couldn't chdir to $vendor_path!</error>");
@@ -111,15 +115,17 @@ class ComposerFlowCommand extends Command
             $result = array();
             $result['tag'] = $tag;
             foreach($queries as $pair) {
+                $key = implode('..', $pair);
                 foreach($pair as &$branch) {
                     if($branch == 'HEAD') {
                         $branch = $tag;
                     } else {
                         $git->checkout($branch); // diffing doesn't work otherwise; no local branches!
+                        $branch = "origin/$branch";
                     }
                 }
                 list($a, $b) = $pair;
-                $result["$a..$b"] = strlen($git->getDiff("origin/$a", "origin/$b"));
+                $result[$key] = strlen($git->getDiff("$a", "$b"));
             }
             $result['name'] = $name;
             $results[$name] = $result;
@@ -145,6 +151,7 @@ class ComposerFlowCommand extends Command
                 $v = $result[$k];
                 if($rowIdx && $colIdx && $k != 'tag') {
                     $tag = $v===0 ? "pass" : "fail";
+                    $v = strtoupper($tag);
                 } elseif(!$rowIdx) {
                     $tag = 'head';
                 } else {
