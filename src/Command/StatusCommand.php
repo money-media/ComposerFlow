@@ -2,14 +2,11 @@
 
 namespace MoneyMedia\Command;
 
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
-use Symfony\Component\Process\Process;
 
 use SebastianBergmann\Git;
 
@@ -35,16 +32,7 @@ class StatusCommand extends BaseCommand
         $output->getFormatter()->setStyle('fail', new OutputFormatterStyle('red', 'yellow', array('bold', 'blink')));
         $output->getFormatter()->setStyle('warn', new OutputFormatterStyle('yellow'));
 
-        $finder = new Finder();
-        $finder->in('.')->directories()->depth('== 1');
-
-        $repos = array();
-        foreach ($finder as $file) {
-            if(is_dir($file->getRealpath().'/.git')) {
-                $repos[$file->getRelativePathname()] = $file->getRealpath();
-            }
-        }
-
+        $repos = $this->_getRepos();
         $pkg_width = array_reduce(array_keys($repos), function($x,$y) { return max(strlen($y),$x); });
 
         $queries = array(
@@ -52,7 +40,6 @@ class StatusCommand extends BaseCommand
             array('master','develop'),
         );
         $results = array();
-
 
         //$repos = array_slice($repos, 0, 4);
 

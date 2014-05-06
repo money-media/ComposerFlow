@@ -7,8 +7,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Finder\Finder;
 
 use SebastianBergmann\Git;
 
@@ -23,17 +23,17 @@ abstract class BaseCommand extends Command
                 InputArgument::REQUIRED,
                 'path to a Composerized application'
             )
-            ->addArgument(
+            ->addOption(
                 'refspec',
-                InputArgument::OPTIONAL,
-                'A tag, branch or refspec for the composer install',
-                'master'
+                null,
+               InputOption::VALUE_REQUIRED,
+                'A tag, branch or refspec for the composer install; implies a fresh checkout'
             )
             ->addOption(
                'no-install',
                null,
                InputOption::VALUE_NONE,
-               'Do not switch branches or run composer install'
+               'Do not switch branches or run composer install. Not compatible with --refspec'
             )
         ;
     }
@@ -41,7 +41,7 @@ abstract class BaseCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $repo = $input->getArgument('repo');
-        $refspec = $input->getArgument('refspec');
+        $refspec = $input->getOption('refspec');
         $doInstall = $input->getOption('no-install')==0;
 
         $composer = `which composer`;
@@ -52,15 +52,16 @@ abstract class BaseCommand extends Command
 
         $vendor_path = "$repo/vendor";
 
-        if(!is_dir($vendor_path)) {
-            $this->_raise($output, "Couldn't chdir to $vendor_path!");
-        }
-
         // composer install
         if(!chdir($repo)) {
             $this->_raise($output, "Couldn't chdir to $repo!");
         }
         $repo = getcwd(); // real path to repo
+
+
+        if(!$doInstall && $refspec) {
+            $this->_raise($output, "--refspec incompatible with --no-install");
+        }
 
         if($doInstall) {
             $this->_composerInstall($repo, $refspec, $output);
@@ -74,9 +75,19 @@ abstract class BaseCommand extends Command
     protected function _composerInstall($repo, $refspec, OutputInterface $output)
     {
         $composerGit = new Git($repo); // checkout tag
-        $composerGit->checkout($refspec);
+        if($refspec) {
+            if (OutputInterface::VERBOSITY_VERBOSE <= $output->getVerbosity()) {
+                $output->write("Checking out \"$refspec\"");
+            }
+            $composerGit->checkout($refspec);
+        } else {
+            if (OutputInterface::VERBOSITY_VERY_VERBOSE <= $output->getVerbosity()) {
+                $output->write("Skipping checkout");
+            }
+        }
+
         if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
-            $output->write("Running Composer install for "$refspec"...");
+            $output->write("Running Composer install");
         }
         $process = new Process('composer install -n');
         $process->setTimeout(3600);
@@ -92,6 +103,30 @@ abstract class BaseCommand extends Command
         if (!$output->isQuiet()) {
             $output->writeln("<error>$message</error>");
         }
-        throw new Exception($message);
+        throw new \Exception($message);
     }
+
+    protected function _getRepos()
+    {
+        $finder = new Finder();
+        $finder->in('.')->directories()->depth('== 1');
+
+        $repos = array();
+        foreach ($finder as $file) {
+            if(is_dir($file->getRealpath().'/.git')) {
+                $repos[$file->getRelativePathname()] = $file->getRealpath();
+            }
+        }
+        return $repos;
+    }
+
+    protected function _filterRepoByBranch($repos, $branch) {
+        return array_filter($repos, function($path) use ($branch) {
+            $git = new Git($path);
+            $output =  `cd $path && git checkout --track -b $branch origin/$branch 2>&1`; // hack for setting up tracking branches fixme
+            $git->checkout($branch);
+            return $git->getCurrentBranch() == $branch;
+        });
+    }
+
 }
