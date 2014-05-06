@@ -40,7 +40,7 @@ class MergeCommand extends Command
                'dry-run',
                null,
                InputOption::VALUE_NONE,
-               'If set, the task will yell in uppercase letters'
+               'If set, the task will not actually merge branches'
             )
         ;
     }
