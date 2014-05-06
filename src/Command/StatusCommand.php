@@ -59,8 +59,9 @@ class StatusCommand extends BaseCommand
         foreach($repos as $name => $path) {
             $git = new Git($path);
             $tag = trim(`git --work-tree="$path" --git-dir="$path/.git" describe`);
-            // fixme only output debugging info if requested
-            $output->writeln($name);
+            if ($output->isDebug()) {
+                $output->writeln("Working on package $name");
+            }
             $result = array();
             $result['tag'] = $tag;
             foreach($queries as $pair) {
@@ -89,12 +90,6 @@ class StatusCommand extends BaseCommand
         foreach($queries as $query) {
             $widths[$query] = array_reduce(array_column($results, $query), function($x,$y) { return max(strlen($y),$x); });
         }
-
-        /*
-        print_r($results);
-        print_r($queries);
-        print_r($widths);
-        */
 
         foreach($results as $rowIdx => $result){
             $string = '';

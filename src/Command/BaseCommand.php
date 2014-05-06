@@ -75,16 +75,23 @@ abstract class BaseCommand extends Command
     {
         $composerGit = new Git($repo); // checkout tag
         $composerGit->checkout($refspec);
+        if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+            $output->write("Running Composer install for "$refspec"...");
+        }
         $process = new Process('composer install -n');
         $process->setTimeout(3600);
         $process->run(function ($type, $buffer) use($output) {
-            $output->write($buffer);
+            if (OutputInterface::VERBOSITY_VERY_VERBOSE <= $output->getVerbosity()) {
+                $output->write($buffer);
+            }
         });
     }
 
     protected function _raise(OutputInterface $output, $message)
     {
-        $output->writeln("<error>$message</error>");
+        if (!$output->isQuiet()) {
+            $output->writeln("<error>$message</error>");
+        }
         throw new Exception($message);
     }
 }
