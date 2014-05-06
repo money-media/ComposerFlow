@@ -1,8 +1,14 @@
 {
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/WIZARDISHUNGRY/git"
+        }
+    ],
     "require": {
         "symfony/console": "2.*",
         "symfony/finder": " 2.*",
-        "sebastian/git": " >=1.2.0",
+        "WIZARDISHUNGRY/git": "dev-master",
         "rhumsaa/array_column": "~1.1",
         "symfony/process": " 2.*"
     },
