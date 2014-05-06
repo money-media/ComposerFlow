@@ -6,4 +6,5 @@ require_once('vendor/autoload.php');
 
 $application = new Application();
 $application->add(new \MoneyMedia\Command\StatusCommand);
+$application->add(new \MoneyMedia\Command\MergeCommand);
 $application->run();

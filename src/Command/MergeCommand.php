@@ -14,26 +14,80 @@ use Symfony\Component\Process\Process;
 use SebastianBergmann\Git;
 
 
-class StatusCommand extends BaseCommand
+class MergeCommand extends Command
 {
-    protected function configure()
-    {
+    protected function configure() {
         parent::configure();
         $this
-            ->setName('status')
-            ->setDescription('Check the git-flow status of a composer application')
+            ->setName('merge')
+            ->setDescription('Initiate a merge from one branch to another (iff they both exist)')
+            ->addArgument(
+                'repo',
+                InputArgument::REQUIRED,
+                'path to a Composerized application'
+            )
+            ->addArgument(
+                'src',
+                InputArgument::REQUIRED,
+                'Merge from this branch'
+            )
+            ->addArgument(
+                'dst',
+                InputArgument::REQUIRED,
+                'Merge into this branch'
+            )
+            ->addOption(
+               'dry-run',
+               null,
+               InputOption::VALUE_NONE,
+               'If set, the task will yell in uppercase letters'
+            )
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        parent::execute($input, $output);
-
         $output->getFormatter()->setStyle('head', new OutputFormatterStyle('white', 'black', array('bold')));
         $output->getFormatter()->setStyle('plain', new OutputFormatterStyle('white'));
         $output->getFormatter()->setStyle('pass', new OutputFormatterStyle('green'));
         $output->getFormatter()->setStyle('fail', new OutputFormatterStyle('red', 'yellow', array('bold', 'blink')));
         $output->getFormatter()->setStyle('warn', new OutputFormatterStyle('yellow'));
+
+        $repo = $input->getArgument('repo');
+        $refspec = $input->getArgument('refspec');
+
+        $composer = `which composer`;
+        if(!$composer) {
+            $output->writeln('<error>Composer not found!</error>');
+            return;
+        }
+        $cwd_orig = getcwd();
+
+        $vendor_path = "$repo/vendor";
+
+        if(!is_dir($vendor_path)) {
+            $output->writeln("<error>Couldn't chdir to $vendor_path!</error>");
+            return;
+        }
+
+        // composer install
+        if(!chdir($repo)) {
+            $output->writeln("<error>Couldn't chdir to $repo!</error>");
+
+        }
+        $repo = getcwd(); // real path to repo
+
+        $composerGit = new Git($repo); // checkout tag
+        $composerGit->checkout($refspec);
+        $process = new Process('composer install -n');
+        $process->setTimeout(3600);
+        $process->run(function ($type, $buffer) use($output) {
+            $output->write($buffer);
+        });
+
+        if(!chdir('vendor')) {
+            $output->writeln("<error>Couldn't chdir to $vendor_path!</error>");
+        }
 
         $finder = new Finder();
         $finder->in('.')->directories()->depth('== 1');
@@ -90,11 +144,9 @@ class StatusCommand extends BaseCommand
             $widths[$query] = array_reduce(array_column($results, $query), function($x,$y) { return max(strlen($y),$x); });
         }
 
-        /*
         print_r($results);
         print_r($queries);
         print_r($widths);
-        */
 
         foreach($results as $rowIdx => $result){
             $string = '';
