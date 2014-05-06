@@ -7,6 +7,6 @@
         "symfony/process": " 2.*"
     },
     "autoload": {
-        "psr-0": {"MoneyMedia\\Command\\": "src/Command"}
+        "psr-4": {"MoneyMedia\\": "src/"}
     }
 }
