@@ -45,9 +45,9 @@ class StatusCommand extends BaseCommand
 
         foreach($repos as $name => $path) {
             $git = new Git($path);
-            $tag = trim(`git --work-tree="$path" --git-dir="$path/.git" describe`);
+            $tag = $git->getCurrentDescription();
             if ($output->isDebug()) {
-                $output->writeln("Working on package $name");
+                $output->writeln("Working on package $name @ $tag");
             }
             $result = array();
             $result['tag'] = $tag;
@@ -62,7 +62,10 @@ class StatusCommand extends BaseCommand
                     }
                 }
                 list($a, $b) = $pair;
-                $result[$key] = strlen($git->getDiff("$a", "$b"));
+                $ahead = $git->getAhead($a, $b);
+                $is_ahead = abs($ahead['left']) + abs($ahead['right']) != 0;
+                $result[$key] = $is_ahead ? "{$ahead['left']},{$ahead['right']}" : null;
+
             }
             $result['name'] = $name;
             $results[$name] = $result;
@@ -83,8 +86,10 @@ class StatusCommand extends BaseCommand
             foreach($queries as $colIdx => $k) {
                 $v = $result[$k];
                 if($rowIdx && $colIdx && $k != 'tag') {
-                    $tag = $v===0 ? "pass" : "fail";
-                    $v = strtoupper($tag);
+                    $tag = $v===null ? "pass" : "fail";
+                    if($tag!='fail') {
+                        $v = strtoupper($tag);
+                    }
                 } elseif(!$rowIdx) {
                     $tag = 'head';
                 } else {
