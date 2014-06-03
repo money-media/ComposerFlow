@@ -77,17 +77,17 @@ abstract class BaseCommand extends Command
         $composerGit = new Git($repo); // checkout tag
         if($refspec) {
             if (OutputInterface::VERBOSITY_VERBOSE <= $output->getVerbosity()) {
-                $output->write("Checking out \"$refspec\"");
+                $output->writeln("Checking out \"$refspec\"");
             }
             $composerGit->checkout($refspec);
         } else {
             if (OutputInterface::VERBOSITY_VERY_VERBOSE <= $output->getVerbosity()) {
-                $output->write("Skipping checkout");
+                $output->writeln("Skipping checkout of root package since refspec not specified");
             }
         }
 
         if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
-            $output->write("Running Composer install");
+            $output->writeln("Running Composer install");
         }
         $process = new Process('composer install -n');
         $process->setTimeout(3600);
