@@ -10,7 +10,8 @@
         "symfony/finder": " 2.*",
         "WIZARDISHUNGRY/git": "dev-master",
         "rhumsaa/array_column": "~1.1",
-        "symfony/process": " 2.*"
+        "symfony/process": " 2.*",
+        "symfony/filesystem": "~2.5"
     },
     "autoload": {
         "psr-4": {"MoneyMedia\\": "src/"}
