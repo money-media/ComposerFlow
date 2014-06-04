@@ -13,6 +13,8 @@ use SebastianBergmann\Git;
 
 class MergeCommand extends BaseCommand
 {
+    protected $_isScratchable = true;
+
     protected function configure() {
         parent::configure();
         $this
@@ -30,9 +32,9 @@ class MergeCommand extends BaseCommand
             )
             ->addOption(
                'dry-run',
-               null,
+               'null',
                InputOption::VALUE_NONE,
-               'If set, the task will not actually merge branches'
+               'If set, the task will not actually merge branches, etc. Might do some checkouts FIXME'
             )
         ;
     }
@@ -42,19 +44,52 @@ class MergeCommand extends BaseCommand
         parent::execute($input, $output);
         $src = $input->getArgument('src');
         $dst = $input->getArgument('dst');
-        $repos = $this->_getRepos();
-        if (OutputInterface::VERBOSITY_VERY_VERBOSE <= $output->getVerbosity()) {
-            $output->writeln("Filtering branches");
+        $dry = $input->getOption('dry-run');
+
+        if (!$dry && OutputInterface::VERBOSITY_QUIET < $output->getVerbosity()) {
+            $output->writeln("<warn>Warning: About to perform a merge! Hit control-C to stop.</warn>");
+            usleep(1000);
         }
+
+
+        $repos = $this->_getRepos();
+        if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+            $output->write("<info>Filtering branches...</info>");
+        }
+
         $srcRepos = $this->_filterRepoByBranch($repos, $src);
         $dstRepos = $this->_filterRepoByBranch($repos, $dst);
         $targetRepos = $this->_filterRepoByBranch($srcRepos, $dst);
+
+        if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+            $output->writeln("<info> done!</info>");
+        }
+
         if (OutputInterface::VERBOSITY_VERBOSE <= $output->getVerbosity()) {
             $numRepos = count($repos);
             $numSrcRepos = count($srcRepos);
             $numDstRepos = count($dstRepos);
             $numTargetRepos = count($targetRepos);
-            $output->writeln("$numRepos repos in total; $numSrcRepos w/ src branch $src, $numDstRepos w/ dst branch $dst, $numTargetRepos with both.");
+            $output->writeln("<comment>$numRepos repos in total; $numSrcRepos w/ src branch $src, $numDstRepos w/ dst branch $dst, $numTargetRepos with both.</comment>");
+            if (OutputInterface::VERBOSITY_VERY_VERBOSE <= $output->getVerbosity()) {
+                $width = array_reduce(array_keys($targetRepos), function($x,$y) { return max(strlen($y),$x); });
+                foreach($targetRepos as $name => $repo) {
+                    $git = new Git($repo);
+                    $ahead = $git->getAhead($src,$dst);
+
+                    $output->writeln(
+                        sprintf("%{$width}s",$name) . "   {$ahead['right']} commits"
+                    );
+                }
+                $output->writeln('');
+            }
         }
+        if($dry) {
+            if (OutputInterface::VERBOSITY_QUIET < $output->getVerbosity()) {
+                $output->writeln("<info>Dry-run complete; exiting.</info>");
+                return;
+            }
+        }
+
     }
 }

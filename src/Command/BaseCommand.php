@@ -6,15 +6,22 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
+
 
 use SebastianBergmann\Git;
 
 
 abstract class BaseCommand extends Command
 {
+
+    protected $_isScratchable = false;
+    protected $_output = null;
+
     protected function configure()
     {
         $this
@@ -35,18 +42,32 @@ abstract class BaseCommand extends Command
                InputOption::VALUE_NONE,
                'Do not switch branches or run composer install. Not compatible with --refspec'
             )
+            ->addOption(
+               'scratch-copy',
+               null,
+               InputOption::VALUE_NONE,
+               'If set, the task will first copy the repo to a temporary location'
+            )
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->_output = $output;
+        $output->getFormatter()->setStyle('head', new OutputFormatterStyle('white', 'black', array('bold')));
+        $output->getFormatter()->setStyle('plain', new OutputFormatterStyle('white'));
+        $output->getFormatter()->setStyle('pass', new OutputFormatterStyle('green'));
+        $output->getFormatter()->setStyle('fail', new OutputFormatterStyle('red', 'yellow', array('bold', 'blink')));
+        $output->getFormatter()->setStyle('warn', new OutputFormatterStyle('yellow', 'black', array('bold', 'blink')));
+
         $repo = $input->getArgument('repo');
         $refspec = $input->getOption('refspec');
         $doInstall = $input->getOption('no-install')==0;
+        $scratch = $input->getOption('scratch-copy');
 
         $composer = `which composer`;
         if(!$composer) {
-            $this->_raise($output, "Composer not found!");
+            $this->_raise("Composer not found!");
         }
         $cwd_orig = getcwd();
 
@@ -54,13 +75,39 @@ abstract class BaseCommand extends Command
 
         // composer install
         if(!chdir($repo)) {
-            $this->_raise($output, "Couldn't chdir to $repo!");
+            $this->_raise("Couldn't chdir to $repo!");
         }
         $repo = getcwd(); // real path to repo
 
+        if($this->_isScratchable && $scratch) {
+            $scratch = $this->_getScratchDirectory();
+
+            $that = $this; // http://stackoverflow.com/questions/19431440/why-can-i-not-use-this-as-a-lexical-variable-in-php-5-5-4
+            $f =  function() use ($that, $scratch, $output) {
+                $that->shutdownHandler($scratch, $output);
+            };
+
+            declare(ticks = 1);
+            register_shutdown_function($f);
+            pcntl_signal(SIGINT, $f);
+            pcntl_signal(SIGTERM, $f);
+
+            if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+                $output->write("<info>Copying repo into scratch directory $scratch...</info>");
+            }
+
+            chdir($scratch);
+            $fs = new Filesystem();
+            $fs->mirror($repo, $scratch);
+
+            if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+                $output->writeln("<info> done!</info>");
+            }
+            $repo = $scratch;
+        }
 
         if(!$doInstall && $refspec) {
-            $this->_raise($output, "--refspec incompatible with --no-install");
+            $this->_raise("--refspec incompatible with --no-install");
         }
 
         if($doInstall) {
@@ -68,7 +115,7 @@ abstract class BaseCommand extends Command
         }
 
         if(!chdir('vendor')) {
-            $this->_raise($output, "Couldn't chdir to $vendor_path!");
+            $this->_raise("Couldn't chdir to $vendor_path!");
         }
     }
 
@@ -77,17 +124,17 @@ abstract class BaseCommand extends Command
         $composerGit = new Git($repo); // checkout tag
         if($refspec) {
             if (OutputInterface::VERBOSITY_VERBOSE <= $output->getVerbosity()) {
-                $output->writeln("Checking out \"$refspec\"");
+                $output->writeln("<info>Checking out \"$refspec\"</info>");
             }
             $composerGit->checkout($refspec);
         } else {
             if (OutputInterface::VERBOSITY_VERY_VERBOSE <= $output->getVerbosity()) {
-                $output->writeln("Skipping checkout of root package since refspec not specified");
+                $output->writeln("<comment>Skipping checkout of root package since refspec not specified</comment>");
             }
         }
 
         if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
-            $output->writeln("Running Composer install");
+            $output->writeln("<info>Running Composer install</info>");
         }
         $process = new Process('composer install -n');
         $process->setTimeout(3600);
@@ -96,10 +143,16 @@ abstract class BaseCommand extends Command
                 $output->write($buffer);
             }
         });
+
+        $code = $process->getExitCode();
+        if($code != 0) {
+            $this->_raise("composer install returned $code");
+        }
     }
 
-    protected function _raise(OutputInterface $output, $message)
+    protected function _raise($message)
     {
+        $output = $this->_output;
         if (!$output->isQuiet()) {
             $output->writeln("<error>$message</error>");
         }
@@ -129,4 +182,35 @@ abstract class BaseCommand extends Command
         });
     }
 
+    protected function _getScratchDirectory()
+    {
+        $tempfile=tempnam(sys_get_temp_dir(), 'cflo');
+        if (file_exists($tempfile)){
+            unlink($tempfile);
+        }
+        mkdir($tempfile);
+        if (is_dir($tempfile))
+        {
+            return $tempfile;
+        }
+        $this->_raise("Problem creating scratch directory in $tempfile");
+    }
+
+    public function shutdownHandler($scratchDirectory, $output)
+    {
+        //register_shutdown_function($f);
+        pcntl_signal(SIGINT, SIG_IGN);
+        pcntl_signal(SIGTERM, SIG_DFL);
+        if(is_dir($scratchDirectory)) {
+            $fs = new Filesystem();
+            if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+                $output->writeln("<info>Removing scratch directory $scratchDirectory</info>");
+            }
+            $fs->remove($scratchDirectory);
+            if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+                $output->writeln("<info> done!</info>");
+            }
+        }
+        exit();
+    }
 }

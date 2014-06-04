@@ -6,7 +6,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
 use SebastianBergmann\Git;
 
@@ -25,12 +24,6 @@ class StatusCommand extends BaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         parent::execute($input, $output);
-
-        $output->getFormatter()->setStyle('head', new OutputFormatterStyle('white', 'black', array('bold')));
-        $output->getFormatter()->setStyle('plain', new OutputFormatterStyle('white'));
-        $output->getFormatter()->setStyle('pass', new OutputFormatterStyle('green'));
-        $output->getFormatter()->setStyle('fail', new OutputFormatterStyle('red', 'yellow', array('bold', 'blink')));
-        $output->getFormatter()->setStyle('warn', new OutputFormatterStyle('yellow'));
 
         $repos = $this->_getRepos();
         $pkg_width = array_reduce(array_keys($repos), function($x,$y) { return max(strlen($y),$x); });
