@@ -76,18 +76,32 @@ class MergeCommand extends BaseCommand
                 foreach($targetRepos as $name => $repo) {
                     $git = new Git($repo);
                     $ahead = $git->getAhead($src,$dst);
+                    $clean = $git->isMergeClean($src, $dst);
 
                     $output->writeln(
-                        sprintf("%{$width}s",$name) . "   {$ahead['right']} commits"
+                        sprintf("%{$width}s",$name) . "   {$ahead['right']} commits ".
+                        ($clean ? 'applies cleanly' : 'does not apply cleanly')
                     );
                 }
                 $output->writeln('');
             }
         }
+
         if($dry) {
             if (OutputInterface::VERBOSITY_QUIET < $output->getVerbosity()) {
                 $output->writeln("<info>Dry-run complete; exiting.</info>");
                 return;
+            }
+        }
+
+
+        foreach($targetRepos as $name => $repo) {
+            $git = new Git($repo);
+            $git->checkout($dst);
+            $message = $git->merge($src);
+            $message = implode(' ', $message);
+            $output->writeln(sprintf("%{$width}s",$name) . "   $message");
+            if (OutputInterface::VERBOSITY_VERBOSE <= $output->getVerbosity()) {
             }
         }
 
