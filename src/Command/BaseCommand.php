@@ -48,6 +48,12 @@ abstract class BaseCommand extends Command
                InputOption::VALUE_NONE,
                'If set, the task will first copy the repo to a temporary location'
             )
+            ->addOption(
+               'save-scratch',
+               null,
+               InputOption::VALUE_NONE,
+               'Don\'t wipe the scratch directory!'
+            )
         ;
     }
 
@@ -64,6 +70,7 @@ abstract class BaseCommand extends Command
         $refspec = $input->getOption('refspec');
         $doInstall = $input->getOption('no-install')==0;
         $scratch = $input->getOption('scratch-copy');
+        $saveScratch = $input->getOption('save-scratch');
 
         $composer = `which composer`;
         if(!$composer) {
@@ -79,17 +86,21 @@ abstract class BaseCommand extends Command
         }
         $repo = getcwd(); // real path to repo
 
+        if($saveScratch && !$scratch) {
+            $this->_raise("Saving the scratch requires --scratch-copy");
+        }
+
         if($this->_isScratchable && $scratch) {
 
-            if(!function_exists('pcntl_signal') {
+            if(!function_exists('pcntl_signal')) {
                 $this->_raise("Please install the pcntl php extension before using scratch dir");
             }
 
             $scratch = $this->_getScratchDirectory();
 
             $that = $this; // http://stackoverflow.com/questions/19431440/why-can-i-not-use-this-as-a-lexical-variable-in-php-5-5-4
-            $f =  function() use ($that, $scratch, $output) {
-                $that->shutdownHandler($scratch, $output);
+            $f =  function() use ($that, $scratch, $output, $saveScratch) {
+                $that->shutdownHandler($scratch, $output, $saveScratch);
             };
 
             declare(ticks = 1);
@@ -201,19 +212,23 @@ abstract class BaseCommand extends Command
         $this->_raise("Problem creating scratch directory in $tempfile");
     }
 
-    public function shutdownHandler($scratchDirectory, $output)
+    public function shutdownHandler($scratchDirectory, $output, $saveScratch)
     {
         //register_shutdown_function($f);
         pcntl_signal(SIGINT, SIG_IGN);
         pcntl_signal(SIGTERM, SIG_DFL);
         if(is_dir($scratchDirectory)) {
-            $fs = new Filesystem();
-            if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
-                $output->writeln("<info>Removing scratch directory $scratchDirectory</info>");
-            }
-            $fs->remove($scratchDirectory);
-            if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
-                $output->writeln("<info> done!</info>");
+            if($saveScratch) {
+                $output->writeln("<info>Preserved scratch directory $scratchDirectory</info>");
+            } else {
+                $fs = new Filesystem();
+                if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+                    $output->writeln("<info>Removing scratch directory $scratchDirectory</info>");
+                }
+                $fs->remove($scratchDirectory);
+                if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
+                    $output->writeln("<info> done!</info>");
+                }
             }
         }
         exit();
