@@ -112,7 +112,7 @@ abstract class BaseCommand extends Command
             pcntl_signal(SIGTERM, $f);
 
             if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
-                $output->write("<info>Copying repo into scratch directory $scratch - "
+                $output->write("<info>Copying repo into scratch directory $scratch - ".
                     "directory ".($saveScratch?'will':'will not')." be preserved</info>");
             }
 
