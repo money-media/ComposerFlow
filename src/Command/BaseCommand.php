@@ -41,20 +41,23 @@ abstract class BaseCommand extends Command
                null,
                InputOption::VALUE_NONE,
                'Do not switch branches or run composer install. Not compatible with --refspec'
-            )
-            ->addOption(
-               'scratch-copy',
-               null,
-               InputOption::VALUE_NONE,
-               'If set, the task will first copy the repo to a temporary location'
-            )
-            ->addOption(
-               'save-scratch',
-               null,
-               InputOption::VALUE_NONE,
-               'Don\'t wipe the scratch directory!'
-            )
-        ;
+            );
+            if($this->_isScratchable) {
+                $this
+                    ->addOption(
+                        'scratch-copy',
+                        null,
+                        InputOption::VALUE_NONE,
+                        'If set, the task will first copy the repo to a temporary location'
+                    )
+                    ->addOption(
+                        'save-scratch',
+                        null,
+                        InputOption::VALUE_NONE,
+                        'Don\'t wipe the scratch directory!'
+                    )
+                ;
+            }
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -109,7 +112,8 @@ abstract class BaseCommand extends Command
             pcntl_signal(SIGTERM, $f);
 
             if (OutputInterface::VERBOSITY_NORMAL <= $output->getVerbosity()) {
-                $output->write("<info>Copying repo into scratch directory $scratch...</info>");
+                $output->write("<info>Copying repo into scratch directory $scratch - "
+                    "directory ".($saveScratch?'will':'will not')." be preserved</info>");
             }
 
             chdir($scratch);
