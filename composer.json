@@ -13,6 +13,9 @@
         "symfony/process": " 2.*",
         "symfony/filesystem": "~2.5"
     },
+    "suggest": {
+        "ext-pcntl": "*"
+    },
     "autoload": {
         "psr-4": {"MoneyMedia\\": "src/"}
     }

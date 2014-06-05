@@ -80,6 +80,11 @@ abstract class BaseCommand extends Command
         $repo = getcwd(); // real path to repo
 
         if($this->_isScratchable && $scratch) {
+
+            if(!function_exists('pcntl_signal') {
+                $this->_raise("Please install the pcntl php extension before using scratch dir");
+            }
+
             $scratch = $this->_getScratchDirectory();
 
             $that = $this; // http://stackoverflow.com/questions/19431440/why-can-i-not-use-this-as-a-lexical-variable-in-php-5-5-4
