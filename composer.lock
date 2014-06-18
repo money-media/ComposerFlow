@@ -3,55 +3,8 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "b477a6f199009e833e6e7815a92a442f",
+    "hash": "69026d286dbf6efa3a9fcaf33576f32e",
     "packages": [
-        {
-            "name": "WIZARDISHUNGRY/git",
-            "version": "dev-master",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/WIZARDISHUNGRY/git.git",
-                "reference": "e32798747cd7b14902b953c0e300a0ce07adb8cf"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/WIZARDISHUNGRY/git/zipball/e32798747cd7b14902b953c0e300a0ce07adb8cf",
-                "reference": "e32798747cd7b14902b953c0e300a0ce07adb8cf",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.2-dev"
-                }
-            },
-            "autoload": {
-                "classmap": [
-                    "src/"
-                ]
-            },
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sebastian@phpunit.de"
-                }
-            ],
-            "description": "Simple wrapper for Git",
-            "homepage": "http://www.github.com/sebastianbergmann/git",
-            "keywords": [
-                "git"
-            ],
-            "support": {
-                "source": "https://github.com/WIZARDISHUNGRY/git/tree/master"
-            },
-            "time": "2014-06-04 21:13:18"
-        },
         {
             "name": "rhumsaa/array_column",
             "version": "1.1.2",
@@ -91,6 +44,53 @@
                 "column"
             ],
             "time": "2013-07-22 16:12:38"
+        },
+        {
+            "name": "sebastian/git",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/WIZARDISHUNGRY/git.git",
+                "reference": "0709a13b5ecd347dae6726e49e67e36b1c730d22"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/WIZARDISHUNGRY/git/zipball/0709a13b5ecd347dae6726e49e67e36b1c730d22",
+                "reference": "0709a13b5ecd347dae6726e49e67e36b1c730d22",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.2-dev"
+                }
+            },
+            "autoload": {
+                "classmap": [
+                    "src/"
+                ]
+            },
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Sebastian Bergmann",
+                    "email": "sebastian@phpunit.de"
+                }
+            ],
+            "description": "Simple wrapper for Git",
+            "homepage": "http://www.github.com/sebastianbergmann/git",
+            "keywords": [
+                "git"
+            ],
+            "support": {
+                "source": "https://github.com/WIZARDISHUNGRY/git/tree/master"
+            },
+            "time": "2014-06-06 15:51:57"
         },
         {
             "name": "symfony/console",
@@ -305,7 +305,7 @@
     ],
     "minimum-stability": "stable",
     "stability-flags": {
-        "wizardishungry/git": 20
+        "sebastian/git": 20
     },
     "platform": [
 
