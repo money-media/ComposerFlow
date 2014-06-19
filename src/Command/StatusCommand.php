@@ -50,10 +50,18 @@ class StatusCommand extends BaseCommand
                     if($branch == 'HEAD') {
                         $branch = $tag;
                     } else {
-                        $git->checkout($branch); // diffing doesn't work otherwise; no local branches!
+                        if(!$git->isExistingBranch("origin/$branch")) { // todo remote remotes hackery
+                            if ($output->isDebug()) {
+                                $output->writeln("package $name missing refspec $branch, skipping $key");
+                            }
+                            $result[$key] = 'skip';
+                            continue 2;
+                        }
+                        $git->checkout("origin/$branch"); // diffing doesn't work otherwise; no local branches!
                         $branch = "origin/$branch";
                     }
                 }
+
                 list($a, $b) = $pair;
                 $ahead = $git->getAhead($a, $b);
                 $is_ahead = abs($ahead['left']) + abs($ahead['right']) != 0;
@@ -79,9 +87,10 @@ class StatusCommand extends BaseCommand
             foreach($queries as $colIdx => $k) {
                 $v = $result[$k];
                 if($rowIdx && $colIdx && $k != 'tag') {
-                    $tag = $v===null ? "pass" : "fail";
-                    if($tag!='fail') {
-                        $v = strtoupper($tag);
+                    if($v===null) {
+                        $v = $tag = 'pass';
+                    } elseif($tag != 'skip') {
+                        $tag = 'fail';
                     }
                 } elseif(!$rowIdx) {
                     $tag = 'head';
